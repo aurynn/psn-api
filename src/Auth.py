@@ -1,9 +1,5 @@
-import simplejson
+import requests
 import json
-import urllib.request
-import urllib.parse
-import os
-
 
 # Global IDs
 LOGIN_CLIENT_ID = '71a7beb8-f21a-47d9-a604-2e71bee24fe0'
@@ -32,12 +28,12 @@ class Auth:
                     }
 
     oauth_request = {
-                        "app_context": "inapp_ios",
-                        "client_id": CLIENT_ID,
-                        "client_secret": CLIENT_SECRET,
-                        "code": None,
-                        "duid": DUID,
-                        "grant_type": "authorization_code",
+                        "app_context":      "inapp_ios",
+                        "client_id":        CLIENT_ID,
+                        "client_secret":    CLIENT_SECRET,
+                        "code":             None,
+                        "duid":             DUID,
+                        "grant_type":       "authorization_code",
                         "scope": "capone:report_submission,psn:sceapp,user:account.get,user:account.settings.privacy.get,user:account.settings.privacy.update,user:account.realName.get,user:account.realName.update,kamaji:get_account_hash,kamaji:ugc:distributor,oauth:manage_device_usercodes"
                     }
 
@@ -67,26 +63,41 @@ class Auth:
                                 "client_id": CLIENT_ID,
                               }
 
-    def __init__(self, email, password, ticket='', code=''):
+    def __init__(self, email, password, ticket='', code='', npsso=''):
         self.login_request['username'] = email
         self.login_request['password'] = password
         self.two_factor_auth_request['ticket_uuid'] = ticket
         self.two_factor_auth_request['code'] = code
-        if (self.GrabNPSSO() is False or self.GrabCode() is False or self.GrabOAuth() is False):
-            print('Error')
+        if npsso:
+            self.npsso = npsso
+            if (self.GrabCode() is False or self.GrabOAuth() is False):
+                print("Error")
+        else:
+            if (self.GrabNPSSO() is False or self.GrabCode() is False or self.GrabOAuth() is False):
+                print('Error')
 
 
     def GrabNPSSO(self):
+        
+        data = None
+        
         if self.two_factor_auth_request['ticket_uuid'] and self.two_factor_auth_request['code']:
+            
+            # This code path currently doesn't do anything beyond load the JSON response.
+            
             data = urllib.parse.urlencode(self.two_factor_auth_request).encode('utf-8')
             request = urllib.request.Request(self.SSO_URL, data = data)
             response = urllib.request.urlopen(request)
             data = json.loads(response.read().decode('utf-8'))
         else:
-            data = urllib.parse.urlencode(self.login_request).encode('utf-8')
-            request = urllib.request.Request(self.SSO_URL, data = data)
-            response = urllib.request.urlopen(request)
-            data = json.loads(response.read().decode('utf-8'))
+            response = requests.post(
+                self.SSO_URL,
+                data=self.login_request
+            )
+            data = response.json()
+            
+            print(json.dumps(data, indent=2))
+            
             if hasattr(data, 'error'):
                 return False
             if hasattr(data, 'ticket_uuid'):
@@ -97,6 +108,8 @@ class Auth:
                 }
                 self.last_error = json.dumps(error)
                 return False
+            print(json.dumps(data, indent=2))
+            print(response.status())
             self.npsso = data['npsso']
             return True
 
@@ -109,13 +122,15 @@ class Auth:
             return ""
 
     def GrabCode(self):
-        data = urllib.parse.urlencode(self.code_request)
-        url = self.CODE_URL+'?'+ data
-        response = os.popen('curl -s -I -H \'Cookie: npsso='+self.npsso+'\' -X GET \''+url+'\' | grep -Fi X-NP-GRANT-CODE').readline()
-
-        self.grant_code = self.find_between(response, 'X-NP-GRANT-CODE: ', '\n')
-
-        if (self.grant_code is ''):
+        response = requests.get(
+            self.CODE_URL, 
+            params=self.code_request,
+            cookies=dict(npsso = self.npsso),
+            allow_redirects=False,
+        )
+        grant_code = response.headers["X-NP-GRANT-CODE"]
+        
+        if not grant_code:
             error = {
                 'error': 'invalid_np_grant',
                 'error_description': 'Failed to obtain X-NP-GRANT-CODE',
@@ -123,7 +138,7 @@ class Auth:
             }
             self.last_error = json.dumps(error)
             return False
-
+        self.grant_code = grant_code
         return True
     
     def GrabNewTokens(refreshToken):
@@ -138,11 +153,11 @@ class Auth:
         }
 
         refresh_oauth_request['refresh_token'] = refreshToken
-
-        data = urllib.parse.urlencode(refresh_oauth_request).encode('utf-8')
-        request = urllib.request.Request(self.OAUTH_URL, data = data)
-        response = urllib.request.urlopen(request)
-        data = json.loads(response.read().decode('utf-8'))
+        
+        # Requests automatically form-encodes the data dictionary
+        response = requests.post(self.OAUTH_URL, data = refresh_oauth_request)
+        
+        data = response.json()
 
         if hasattr(data, 'error'):
             return False
@@ -151,11 +166,11 @@ class Auth:
 
     def GrabOAuth(self):
         self.oauth_request['code'] = self.grant_code
-
-        data = urllib.parse.urlencode(self.oauth_request).encode('utf-8')
-        request = urllib.request.Request(self.OAUTH_URL, data = data)
-        response = urllib.request.urlopen(request)
-        data = json.loads(response.read().decode('utf-8'))
+        
+        # Requests sets up the content-type encoding for us
+        
+        response = requests.post(self.OAUTH_URL, data = self.oauth_request)
+        data = response.json()
 
         if hasattr(data, 'error'):
             self.last_error = data['body']

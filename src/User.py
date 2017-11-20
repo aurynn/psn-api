@@ -1,8 +1,5 @@
-import simplejson
-import json
-import urllib.request
-import urllib.parse
-import os
+import requests
+from urllib.parse import urljoin
 
 class User:
 
@@ -19,11 +16,11 @@ class User:
         header = {
             'Authorization': 'Bearer '+self.oauth
         }
+        endpoint = '?fields=npId,onlineId,avatarUrls,plus,aboutMe,languagesUsed,trophySummary(@default,progress,earnedTrophies),isOfficiallyVerified,personalDetail(@default,profilePictureUrls),personalDetailSharing,personalDetailSharingRequestMessageFlag,primaryOnlineStatus,presences(@titleInfo,hasBroadcastData),friendRelation,requestMessageFlag,blocking,mutualFriendsCount,following,followerCount,friendsCount,followingUsersCount&avatarSizes=m,xl&profilePictureSizes=m,xl&languagesUsedLanguageSet=set3&psVitaTitleIcon=circled&titleIconSize=s'
+        
+        url = urljoin(self.USERS_URL, "me/profile2")
+        url = urljoin(url, endpoint)
+        
+        response = requests.get(url=url,headers=header)
 
-        endpoint = 'me/profile2?fields=npId,onlineId,avatarUrls,plus,aboutMe,languagesUsed,trophySummary(@default,progress,earnedTrophies),isOfficiallyVerified,personalDetail(@default,profilePictureUrls),personalDetailSharing,personalDetailSharingRequestMessageFlag,primaryOnlineStatus,presences(@titleInfo,hasBroadcastData),friendRelation,requestMessageFlag,blocking,mutualFriendsCount,following,followerCount,friendsCount,followingUsersCount&avatarSizes=m,xl&profilePictureSizes=m,xl&languagesUsedLanguageSet=set3&psVitaTitleIcon=circled&titleIconSize=s'
-
-        request = urllib.request.Request(self.USERS_URL+endpoint, headers=header)
-        response = urllib.request.urlopen(request)
-        data = json.loads(response.read().decode('utf-8'))
-
-        return data
+        return response.json()
