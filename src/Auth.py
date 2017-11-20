@@ -4,6 +4,13 @@ import urllib.request
 import urllib.parse
 import os
 
+
+# Global IDs
+LOGIN_CLIENT_ID = '71a7beb8-f21a-47d9-a604-2e71bee24fe0'
+CLIENT_ID       = "b7cbf451-6bb6-4a5a-8913-71e61f462787"
+DUID            = "0000000d000400808F4B3AA3301B4945B2E3636E38C0DDFC"
+CLIENT_SECRET   = "zsISsjmCx85zgCJg"
+
 class Auth:
 
     oauth = None
@@ -21,34 +28,34 @@ class Auth:
                         "authentication_type": 'password',
                         "username": None,
                         'password': None,
-                        'client_id': '71a7beb8-f21a-47d9-a604-2e71bee24fe0'
+                        'client_id': LOGIN_CLIENT_ID
                     }
 
     oauth_request = {
                         "app_context": "inapp_ios",
-                        "client_id": "b7cbf451-6bb6-4a5a-8913-71e61f462787",
-                        "client_secret": "zsISsjmCx85zgCJg",
+                        "client_id": CLIENT_ID,
+                        "client_secret": CLIENT_SECRET,
                         "code": None,
-                        "duid": "0000000d000400808F4B3AA3301B4945B2E3636E38C0DDFC",
+                        "duid": DUID,
                         "grant_type": "authorization_code",
                         "scope": "capone:report_submission,psn:sceapp,user:account.get,user:account.settings.privacy.get,user:account.settings.privacy.update,user:account.realName.get,user:account.realName.update,kamaji:get_account_hash,kamaji:ugc:distributor,oauth:manage_device_usercodes"
                     }
 
     code_request = {
                         "state": "06d7AuZpOmJAwYYOWmVU63OMY",
-                        "duid": "0000000d000400808F4B3AA3301B4945B2E3636E38C0DDFC",
+                        "duid": DUID,
                         "app_context": "inapp_ios",
-                        "client_id": "b7cbf451-6bb6-4a5a-8913-71e61f462787",
+                        "client_id": CLIENT_ID,
                         "scope": "capone:report_submission,psn:sceapp,user:account.get,user:account.settings.privacy.get,user:account.settings.privacy.update,user:account.realName.get,user:account.realName.update,kamaji:get_account_hash,kamaji:ugc:distributor,oauth:manage_device_usercodes",
                         "response_type": "code"
                     }
 
     refresh_oauth_request = {
                                 "app_context": "inapp_ios",
-                                "client_id": "b7cbf451-6bb6-4a5a-8913-71e61f462787",
-                                "client_secret": "zsISsjmCx85zgCJg",
+                                "client_id": CLIENT_ID,
+                                "client_secret": CLIENT_SECRET,
                                 "refresh_token": None,
-                                "duid": "0000000d000400808F4B3AA3301B4945B2E3636E38C0DDFC",
+                                "duid": DUID,
                                 "grant_type": "refresh_token",
                                 "scope": "capone:report_submission,psn:sceapp,user:account.get,user:account.settings.privacy.get,user:account.settings.privacy.update,user:account.realName.get,user:account.realName.update,kamaji:get_account_hash,kamaji:ugc:distributor,oauth:manage_device_usercodes"
                             }
@@ -57,7 +64,7 @@ class Auth:
                                 "authentication_type": "two_step",
                                 "ticket_uuid": None,
                                 "code": None,
-                                "client_id": "b7cbf451-6bb6-4a5a-8913-71e61f462787",
+                                "client_id": CLIENT_ID,
                               }
 
     def __init__(self, email, password, ticket='', code=''):
@@ -122,10 +129,10 @@ class Auth:
     def GrabNewTokens(refreshToken):
         refresh_oauth_request = {
             "app_context": "inapp_ios",
-            "client_id": "b7cbf451-6bb6-4a5a-8913-71e61f462787",
-            "client_secret": "zsISsjmCx85zgCJg",
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
             "refresh_token": None,
-            "duid": "0000000d000400808F4B3AA3301B4945B2E3636E38C0DDFC",
+            "duid": DUID,
             "grant_type": "refresh_token",
             "scope": "capone:report_submission,psn:sceapp,user:account.get,user:account.settings.privacy.get,user:account.settings.privacy.update,user:account.realName.get,user:account.realName.update,kamaji:get_account_hash,kamaji:ugc:distributor,oauth:manage_device_usercodes"
         }
@@ -133,7 +140,7 @@ class Auth:
         refresh_oauth_request['refresh_token'] = refreshToken
 
         data = urllib.parse.urlencode(refresh_oauth_request).encode('utf-8')
-        request = urllib.request.Request('https://auth.api.sonyentertainmentnetwork.com/2.0/oauth/token', data = data)
+        request = urllib.request.Request(self.OAUTH_URL, data = data)
         response = urllib.request.urlopen(request)
         data = json.loads(response.read().decode('utf-8'))
 
